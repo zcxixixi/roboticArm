@@ -1,0 +1,10 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+We have shown that reallocating disturbance--rejection duties between estimation and learning delivers \emph{system-level} gains on 3-DOF arms: rejection bandwidth extends \emph{without} the noise penalties of high-gain observers, friction-dominated low-speed motion becomes smoother, and task-space objectives are preserved at \CtrlRate~Hz. Beyond the headline numbers (\rmseProp{} RMSE reduction; \bwProp{} bandwidth increase vs.\ fixed-gain ADRC), the enduring value is a \emph{deployable control pattern}: a noise-safe observer backbone plus a lightweight residual learner, with tuning rules that map directly to tracking envelopes. We expect this template to transfer to contact-rich assembly, surgical assistance, and HRI scenarios where disturbance spectra are unknown and time-varying.
+
+\subsection*{Limitations and Future Work}
+
+\textit{Limitations.} (i)~The RBF network requires offline selection of kernel centers and widths over the workspace; under extreme regimes that extend beyond the design workspace, approximation quality may degrade. (ii)~The analysis assumes bounded approximation and observer errors; extending to network saturation and scheduling effects in tight real-time loops remains open. (iii)~Results focus on rigid-joint manipulators; compliance and series elasticity introduce additional unmodeled dynamics. 
+
+\textit{Future work.} (i)~Adaptive RBF center placement with online workspace expansion. (ii)~An ISS/ISpS discrete-time analysis that incorporates sampling/latency bounds for firm real-time certification. (iii)~Extension to flexible/underactuated platforms and dual-arm coordination.

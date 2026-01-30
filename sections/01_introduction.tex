@@ -1,0 +1,134 @@
+\section{Introduction}
+\label{sec:introduction}
+
+% --- Paragraph 1: application & target ---
+\IEEEPARstart{H}{igh-precision} manipulation in advanced manufacturing, surgical robotics, and human--robot collaboration demands multi-DoF manipulators to deliver sub-millimeter end-effector tracking with predictable interaction forces across frequent task transitions and varying operating points.
+
+% --- Paragraph 2: disturbance landscape (ENHANCED with physical mechanisms) ---
+Performance is degraded by \emph{heterogeneous} mechanisms that are notoriously hard to parametrize: 
+(i)~friction regimes that transition from Coulomb to viscous with a pronounced \emph{Stribeck knee} and induce low-speed micro stick--slip limit cycles; 
+(ii)~drivetrain effects such as harmonic-drive gear meshing and reducer ripple that inject narrow-band torques; 
+(iii)~payload changes and contact wrenches producing nonstationary, broadband disturbances. 
+Consequently, manipulators face \emph{mixed-spectrum} perturbations---some narrow-band and drifting in frequency, others aperiodic impulses---rendering fixed-bandwidth observers or frequency-prior resonant designs fragile in practice \cite{verma2019disturbance,zhang2023universal,fareh2021adrcreview,gamez2025composite}.
+
+\subsection{Traditional Robust and Adaptive Control}
+
+Classical nonlinear and robust strategies---computed torque with adaptive updates, and sliding-mode control (SMC) variants---provide rejection against matched uncertainties and bounded exogenous inputs. Composite SMC designs augmented with disturbance observers (DOs) or finite-time observers achieve strong asymptotic/finite-time properties and have been demonstrated on robot manipulators, including assembly-like scenarios with rapid error regulation \cite{qin2023adaptive,li2023adaptive}. Yet these designs typically require conservative bounds and may incur residual chattering or performance conservatism when disturbance spectra drift or when constraints must be enforced online (e.g., torque limits and safety envelopes).
+
+\subsection{Observer-Based Methods (ADRC/DOB)}
+
+``Estimate-and-compensate'' architectures are a dominant thread in precision motion and robotics. Active Disturbance Rejection Control (ADRC), first proposed by Han \cite{han2009adrc}, augments the state with a generalized disturbance estimated by an extended state observer (ESO), enabling real-time compensation with limited model reliance; comprehensive surveys report increasing adoption in manipulators and related systems \cite{fareh2021adrcreview}. Disturbance observers (DOBs) explicitly reconstruct the joint-level lumped disturbance for feedforward cancellation and have become a staple in industrial motion control \cite{sariyildiz2020discreteDOB,oboe2020dob35}.
+
+\textbf{The fundamental ADRC dilemma.} However, \emph{observer bandwidth vs.\ noise/robustness trade-offs} represent a core limitation in practical ADRC deployment \cite{sariyildiz2020discreteDOB,zhang2023universal}. When facing high-frequency structured disturbances (e.g., friction-induced oscillations at joint velocities), the ESO must be tuned to high bandwidth ($\omega_o \gg 100$ rad/s) to achieve adequate tracking. Yet, high bandwidth inevitably:
+\begin{itemize}[leftmargin=1.5em, itemsep=1pt, topsep=1pt]
+    \item Amplifies sensor noise (encoder quantization, mechanical vibration);
+    \item Excites unmodeled high-frequency dynamics (joint flexibility, backlash);
+    \item Reduces stability margins, risking limit-cycle oscillations or instability near actuator saturation.
+\end{itemize}
+This \emph{``bandwidth--noise curse''} is the Achilles' heel of ADRC in high-precision robotic manipulation: conservative bandwidth sacrifices disturbance rejection, while aggressive bandwidth compromises robustness. Recent advances in drive systems improve periodic-disturbance rejection by resonant augmentation of the ESO \cite{tian2024pmsm}, but such designs rely on spectral priors that are unavailable on manipulators undergoing contact/task changes \cite{xu2025model}.
+
+\subsection{Advanced Robust Planning and Task-Space Treatments}
+
+To handle constraints and coordinate multi-DOF motion, tube-based model predictive control (tube-MPC) wraps a nominal controller with an invariant tube that guarantees constraint satisfaction under bounded disturbances---an approach successfully combined with inverse dynamics and DOBs for manipulators \cite{yang2023inverse}. At the task level, $H_\infty$ controllers formulated in operational or dual-quaternion space provide disturbance attenuation specifications directly on the end-effector pose \cite{figueredo2021automatica,verma2019disturbance}, clarifying how different uncertainty sources map to end-effector errors. These frameworks yield guarantees at the planning/kinematic layers, but they also inherit modeling burdens and computational costs that may limit their ability to adapt rapidly to nonstationary, mixed-type disturbances during contact-rich tasks.
+
+\subsection{Learning-Enhanced Compensation}
+
+Neural-network (NN) adaptive control has been leveraged to approximate residual dynamics beyond parametric models, including friction-dominated regimes and saturation/constraint effects. Recent manipulator studies in top venues integrate lightweight RBF/NN approximators with Lyapunov-designed adaptation and constraint handling, achieving boundedness while improving tracking \cite{li2024adaptive}.
+
+\textbf{Limitations of pure NN approaches.} Despite these advances, pure learning controllers face critical limitations:
+\begin{itemize}[leftmargin=1.5em, itemsep=1pt, topsep=1pt]
+    \item \emph{Slow transient response}: Adaptive laws require time to converge; sudden disturbances (payload drops, external impacts) cannot be rejected until weights adjust.
+    \item \emph{Stability certification burden}: Ensuring global/semi-global stability across the manipulator's full workspace demands restrictive assumptions (bounded approximation error, persistence of excitation).
+    \item \emph{Vulnerability to non-structured disturbances}: NNs excel at learning \emph{state-dependent} patterns (friction, gravity errors) but struggle with \emph{state-independent} aperiodic shocks or time-varying external forces.
+\end{itemize}
+The field thus exhibits a split capability: robust observer-based controllers with limited adaptivity versus learning modules with limited guarantees \cite{yang2022neural,zhang2022output,gao2023neural}. \textbf{The key question becomes}: \emph{Can we architecturally fuse the strengths of bothâ€”ADRC's fast model-free rejection and NN's structured learningâ€”while avoiding their individual weaknesses?}
+
+% Method comparison table - IEEE Standard Format (FINAL CORRECT VERSION)
+\begin{table}[!t]
+\centering
+\caption{Taxonomy of Disturbance--Uncertainty Handling for Manipulators}
+\label{tab:method_comparison}
+\scriptsize
+\renewcommand{\arraystretch}{1.1} % Tighter spacing
+\setlength{\tabcolsep}{3pt}
+% No row colors for IEEE Transactions standard style
+\begin{tabular}{lccccccl}
+\toprule
+\textbf{Method} & \textbf{Space} & \textbf{Dist.} & \textbf{Adapt.} & \textbf{Guar.} & \textbf{Model} & \textbf{RT} & \textbf{Key limitation}\\
+\midrule
+ADRC (ESO)      & Joint & Lumped   & $\times$ & Lyapunov & Low  & High & Bandwidth--noise trade-off\\
+DOB / RTOB      & Joint & Ext. lumped & $\times$ & d.t. robust & Mid & High & Discrete-time stability\\
+$H_{\infty}/\mu$ & Task & Modeled & $\times$ & $H_{\infty}$ & High & Mid & Model dependency\\
+SMC (+DO)       & Joint & Matched  & $\times$ & finite-time & Low--Mid & High & Chattering\\
+Tube MPC        & J/T   & Bounded  & $\times$ & ISS/tube & High & Mid & Computational burden\\
+NN residual     & J/T   & Structured & $\checkmark$ & Conditional & Low--Mid & Mid & Poor aperiodic rejection\\
+\midrule
+\textbf{Ours} & \textbf{J$\to$T} & \textbf{Mixed} & \textbf{$\checkmark$} & \textbf{Lyapunov} & \textbf{Low} & \textbf{High} & \textbf{ESO--NN cooperative}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent The taxonomy in Table~\ref{tab:method_comparison} highlights that no prior method meets all four requirements; we next quantify the gap.
+
+\subsection{Research Gap}
+
+No existing approach, to our knowledge, simultaneously achieves: 
+(i)~fast \emph{joint-level} disturbance rejection with bandwidth $\ge$ \MinBW~Hz at a \CtrlRate~Hz loop, 
+(ii)~\emph{online} adaptation to frictional and exogenous residuals \emph{without} frequency priors, 
+(iii)~bounded task-space performance under constraints, and 
+(iv)~real-time feasibility on a \MinDOF-DoF laboratory arm. 
+
+\noindent \textit{Motivation for a cooperative design.}
+As summarized in Table~\ref{tab:method_comparison}, no prior approach concurrently satisfies all four requirements; in particular, fixed-gain observers face bandwidth--noise limits while learning-only controllers lack uniform stability and timing guarantees. This motivates a \emph{cooperative} controller that reallocates estimation and learning responsibilities online---without spectral priors---yet remains lightweight on a \MinDOF-DoF platform while preserving task-space objectives.
+
+\subsection*{F. This work: cooperative ESO--NN design (mechanism and interfaces)}
+
+\textbf{Core insight: ADRC + NN as "complementary specialists".} The key observation motivating our design is that ADRC (via ESO) and NN possess \emph{orthogonal strengths}:
+\begin{itemize}[leftmargin=1.5em, itemsep=1pt, topsep=1pt]
+    \item \textbf{ADRC excels at}: Fast, model-free rejection of \emph{aperiodic, state-independent} disturbances (payload changes, external impacts, sudden coupling effects)â€”but suffers from the bandwidth--noise curse when forced to track \emph{high-frequency structured} patterns.
+    \item \textbf{NN excels at}: Learning \emph{structured, state-dependent} nonlinearities (friction, gravity errors, systematic biases) with high accuracyâ€”but requires time to adapt and struggles with \emph{abrupt unstructured} shocks.
+\end{itemize}
+
+\textbf{Mechanism: Cooperative load reduction.} We propose a \emph{structurally coupled} architecture where the NN is \emph{strategically assigned} to learn and compensate the \emph{dominant structured component} (joint friction $d_{\text{fric}}(q,\dot{q})$), thereby \emph{unburdening the ESO} from tracking high-frequency periodic patterns. With friction pre-compensated by the NN, the ESO only needs to handle the \emph{residual} (smaller, slower, mostly aperiodic) disturbances. This allows:
+\begin{itemize}[leftmargin=1.5em, itemsep=1pt, topsep=1pt]
+    \item \textbf{ESO bandwidth reduction}: $\omega_o$ can be set conservatively (e.g., 50--80 rad/s) without sacrificing tracking, since the NN absorbs the high-frequency friction "burden."
+    \item \textbf{Noise immunity}: Lower $\omega_o$ directly reduces sensor noise amplification and avoids exciting unmodeled dynamics.
+    \item \textbf{Stability margin improvement}: Conservative observer gains widen the stability region, enabling safer operation near actuator limits.
+\end{itemize}
+\emph{This "load reduction" principle fundamentally breaks the ADRC bandwidth--noise curse}, converting the method from a simple A+B combination into a solution to a domain-specific architectural dilemma.
+
+\textbf{Mechanism.} The cooperative design operates through NN-to-ESO feedforward: the NN pre-compensates state-dependent friction $\hat{d}_{\text{NN}}(q, \dot{q})$, which directly reduces the residual disturbance magnitude that the ESO must track, enabling lower observer bandwidth without sacrificing tracking performance.
+
+\textbf{Tuning law.} A Lyapunov-certified adaptation with explicit $(\omega_o,\Gamma,\sigma)$ coupling is derived, linking observer bandwidth, NN learning rate, and regularization to tracking envelopes and noise immunity. Joint--task coordination is achieved via standard operational-space mappings (and optional tube-style margins) without assuming frequency priors.
+
+\subsection*{G. Contributions}
+
+\begin{enumerate}
+\item \textbf{Cooperative ESO--NN with certified tuning.}
+A structurally coupled observer--learner design where the NN learns friction residuals through Lyapunov-based tracking-error adaptation, providing stabilized feedforward to the ESO. We derive explicit $(\omega_o,\Gamma,\sigma)$ tuning rules that link observer bandwidth, NN learning rate, and regularization to tracking envelopes and noise immunity.
+
+\item \textbf{Decoupled RBF structure without dimensional blow-up.}
+A decoupled RBF network architecture where each joint's friction is approximated using only its \emph{local} 2D state $(q_i, \dot{q}_i)$, rather than the full $2n$-dimensional state. This design avoids the curse of dimensionality (which would require $\sim 10^6$ neurons for uniform grid coverage), keeping the NN computationally tractable on the 3-DOF testbed while retaining robust friction approximation via Gaussian kernel universal approximation.
+
+\item \textbf{Joint--task coordination under constraints.}
+A controller that preserves task-space objectives while performing joint-level compensation, with optional tube-style margins for constraint handling.
+
+\item \textbf{System-level evidence on 3-DOF hardware.}
+On a \MinDOF-DoF arm at \CtrlRate~Hz, the method achieves \imprRMSE{} lower RMSE and \imprBW{} higher rejection bandwidth than fixed-gain ADRC under payload switches and contact transitions.
+\end{enumerate}
+
+\subsection*{H. Paper outline}
+\label{sec:paper_outline}
+
+Section II: Methodology---problem formulation, cooperative ESO--NN design, decoupled RBF structure, stability analysis, and joint--task coordination.\\
+Section III: Experimental design---test platform, baseline comparisons, and evaluation metrics.\\
+Section IV: Results and analysis---quantitative comparisons, disturbance rejection bandwidth, and payload robustness.\\
+Section V: Conclusions and future work.
+
+% System architecture figure - IEEE-style professional design (scaled to fit page)
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/ESONNPre.pdf}
+\caption{Proposed cooperative ADRC--NN architecture. The ESO (gray) provides fast baseline rejection of lumped disturbances, while the NN (brown) adaptively learns state-dependent friction residuals through tracking-error-based adaptation. Both estimates $\hat{f}_{\text{ESO}}$ and $\hat{d}_{\text{NN}}$ are fused for composite feedforward compensation.}
+\label{fig:framework}
+\end{figure*}

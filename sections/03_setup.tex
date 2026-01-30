@@ -1,0 +1,27 @@
+\section{Experimental design}
+\label{sec:experiments_design}
+
+\subsection{Test scenarios}
+We designed three classes of scenarios to evaluate disturbance handling:
+\begin{enumerate}
+\item \textbf{Payload variation:} Step changes 0$\to$2$\to$5\,kg at $t=5,\,10$\,s during circular trajectory tracking (100\,mm radius, 0.5\,Hz).
+\item \textbf{Contact transitions:} Smooth approach to rigid surface with force threshold 10\,N, followed by contact-constrained sliding (5\,N tangential force).
+\item \textbf{Injected periodic/aperiodic disturbances:} Sinusoidal torque at 3\,Hz (amplitude 2\,Nm) superimposed with random step disturbances (0--1\,Nm, Poisson rate 2\,Hz).
+\end{enumerate}
+
+\subsection{Benchmark methods}
+\begin{itemize}
+\item \textbf{PID + Friction model:} Classical PD with feedforward friction compensation (Coulomb+viscous model).
+\item \textbf{Pure ADRC (High-gain):} ESO-based ADRC with fixed $\omega_o = 113$\,rad/s ($\approx 18$\,Hz, higher than proposed to match bandwidth).
+\item \textbf{Pure ADRC (Low-gain):} ESO-based ADRC with $\omega_o = 75.4$\,rad/s (same bandwidth as proposed, \emph{without} NN---isolates NN contribution).
+\item \textbf{Pure NN:} NN-based compensation with the same PD nominal controller and feature set, but no ESO (isolates learning without observer).
+\item \textbf{Proposed:} Cooperative ADRC--NN with $\omega_o = 75.4$\,rad/s ($\approx 12$\,Hz).
+\end{itemize}
+
+\subsection{Evaluation metrics}
+\begin{itemize}
+\item RMSE and max tracking error in task space (mm).
+\item Disturbance rejection bandwidth (Hz) from frequency sweep.
+\item Settling time after payload step (s).
+\item Control smoothness: torque variation $\int_0^T \|\dot{\tau}\|^2 dt$.
+\end{itemize}
